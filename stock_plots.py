@@ -21,13 +21,13 @@ ax.plot(data['Date'], data['Open'], label="Open", color="blue")
 ax.plot(data['Date'], data['Close'], label="Close", color="red")
 ax.set_title("Open-Close Price over Time")
 ax.legend()
-plt.show()
+# plt.show()
 
 # Plot 2 - Trading Volume (check for outliers)
 plt.figure(figsize=(12,6))
 plt.plot(data['Date'],data['Volume'], color="orange")
 plt.title("Stock Volume over Time")
-plt.show()
+# plt.show()
 
 
 # Drop non-numeric columns
@@ -37,4 +37,13 @@ numeric_data = data.select_dtypes(include=["int64","float64"])
 plt.figure(figsize=(8,6))
 sns.heatmap(numeric_data.corr(), annot=True, cmap="coolwarm")
 plt.title("Feature Correlation Heatmap")
+# plt.show()
+
+# Plot 4 - Distribution of Features
+fig, ax = plt.subplots(2, 3, figsize=(12,8))
+features = numeric_data.columns
+for i, feature in enumerate(features):
+    sns.histplot(numeric_data[feature], bins=30, kde=True, ax=ax[i//3, i%3])
+    ax[i//3, i%3].set_title(f"Distribution of {feature}")
+plt.tight_layout()
 plt.show()

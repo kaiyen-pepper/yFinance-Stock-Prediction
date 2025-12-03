@@ -121,3 +121,17 @@ plt.xlabel("Date")
 plt.ylabel("Close Price")
 plt.legend()
 plt.show()
+
+
+# Print Root Mean Squared Error (RMSE) and plot training history
+y_pred = model.predict(X_test)
+rmse = np.sqrt(np.mean((y_pred - y_test)**2))
+print("RMSE:", rmse)
+plt.figure(figsize=(12,8))
+plt.plot(predictions, label='Predicted Prices')
+plt.plot(y_test, label='Actual Prices')
+plt.title('Predicted vs Actual Stock Prices')
+plt.xlabel('Time')
+plt.ylabel('Stock Price')
+plt.legend()
+plt.show()
