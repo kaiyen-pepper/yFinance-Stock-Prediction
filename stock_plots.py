@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # Load and preprocess data
-data = pd.read_csv('stock_data\MSFT_2020-01-01_2025-12-01_1d.csv')
+data = pd.read_csv('stock_data\MSFT_2013-01-01_2025-12-01_1d.csv')
 
 # Display basic information about the dataset
 print(data.head())

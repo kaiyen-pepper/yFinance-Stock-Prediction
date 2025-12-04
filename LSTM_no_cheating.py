@@ -1,16 +1,14 @@
+from tensorflow import keras
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 from datetime import datetime
-import tensorflow as tf # type: ignore
-from tensorflow import keras # type: ignore
 from tensorflow.keras.models import Sequential # type: ignore
 from tensorflow.keras.layers import LSTM, Dense, Dropout # type: ignore
 from tensorflow.keras.optimizers import Adam # type: ignore
-from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint # type: ignore
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow logging
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Disable oneDNN optimizations 
@@ -22,7 +20,6 @@ data = pd.read_csv('stock_data\MSFT_2013-01-01_2025-12-01_1d.csv')
 data['Date'] = pd.to_datetime(data['Date'])
 data.set_index('Date', inplace=True)
 data.sort_index(inplace=True)
-
 
 # Convert to numeric
 for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
@@ -37,10 +34,7 @@ print(f"Date range: {data.index.min()} to {data.index.max()}")
 # Prepare for the LSTM Model (Sequential)
 X = data.filter(["Close"])
 y = data['Close']
-print(X.head())
-print(y.head())
-
-# Define date ranges for splitting
+stock_close = data.filter(["Close"])
 TRAIN_END = datetime(2023,12,31)
 VAL_END = datetime(2024,12,31)
 TEST_END = datetime(2025,12,1)
@@ -56,15 +50,17 @@ print(f"Test data shape: {test_X.shape}, Test labels shape: {test_labels.shape}"
 
 # Preprocessing Stages
 # Scale features
-scaler = MinMaxScaler()
+scaler = StandardScaler()
 scaler.fit(train_X)  # learn from training data only
 train_X_scaled = pd.DataFrame(scaler.transform(train_X), columns=train_X.columns, index=train_X.index)
 val_X_scaled = pd.DataFrame(scaler.transform(val_X), columns=val_X.columns, index=val_X.index)
 test_X_scaled = pd.DataFrame(scaler.transform(test_X), columns=test_X.columns, index=test_X.index)
 
+X_train, y_train = [], []
+
 
 # Create sequences
-SEQUENCE_LENGTH = 15
+SEQUENCE_LENGTH = 30
 def create_sequences(features, labels, window_size):
     X_seq, y_seq = [], []
     for i in range(window_size, len(features)):
@@ -78,36 +74,22 @@ X_test, y_test = create_sequences(test_X_scaled, test_labels, SEQUENCE_LENGTH)
 print(f"Train: {X_train.shape}, Val: {X_val.shape}, Test: {X_test.shape}")
 
 # Build the Model
-model = Sequential([
-    LSTM(64, return_sequences=True, input_shape=(30, len(X.columns))),
-    Dropout(.2),
+model = keras.models.Sequential([
+    LSTM(64, return_sequences=True, input_shape=(X_train.shape[1],1)),
     LSTM(64, return_sequences=False),
-    Dropout(.2),
-    Dense(128, activation='relu'),
+    Dense(128, activation="relu"),
+    Dropout(0.5),
     Dense(1)
 ])
 
-model.compile(
-    loss='mae', 
-    optimizer='adam', 
-    metrics=[keras.metrics.RootMeanSquaredError()])
-
-# Display model summary
-print("MODEL ARCHITECTURE SUMMARY")
 model.summary()
+model.compile(optimizer="adam",
+              loss="mae",
+              metrics=[keras.metrics.RootMeanSquaredError()])
 
 
-# Fit the Model
-early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
-model_checkpoint = ModelCheckpoint('best_lstm_model.h5', save_best_only=True, monitor='val_loss')
-
-history = model.fit(
-    X_train, y_train,
-    validation_data=(X_val, y_val),
-    epochs=50,
-    batch_size=32,
-    callbacks=[early_stopping, model_checkpoint]
-)
+history = model.fit(X_train, y_train, epochs=20, batch_size=32, 
+                    validation_data=(X_val, y_val))
 
 # Evaluate the Model
 test_loss, test_rmse = model.evaluate(X_test, y_test)

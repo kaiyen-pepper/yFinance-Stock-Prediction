@@ -11,7 +11,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Suppress TensorFlow logging
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Disable oneDNN optimizations 
 
 # Load and preprocess data
-data = pd.read_csv('stock_data\MSFT_2020-01-01_2025-12-01_1d.csv')
+data = pd.read_csv('stock_data\MSFT_2013-01-01_2025-12-01_1d.csv')
 
 # Convert date column and set as index
 data['Date'] = pd.to_datetime(data['Date'])
@@ -30,13 +30,6 @@ prediction = data.loc[
     (data['Date'] > datetime(2013,1,1)) &
     (data['Date'] < datetime(2018,1,1))
 ]
-
-plt.figure(figsize=(12,6))
-plt.plot(data['Date'], data['Close'],color="blue")
-plt.xlabel("Date")
-plt.ylabel("Close")
-plt.title("Price over time")
-
 
 # Prepare for the LSTM Model (Sequential)
 stock_close = data.filter(["Close"])
@@ -107,25 +100,20 @@ predictions = scaler.inverse_transform(predictions)
 # Plotting data
 train = data[:training_data_len]
 test =  data[training_data_len:]
-
 test = test.copy()
-
 test['Predictions'] = predictions
 
 plt.figure(figsize=(12,8))
 plt.plot(train['Date'], train['Close'], label="Train (Actual)", color='blue')
 plt.plot(test['Date'], test['Close'], label="Test (Actual)", color='orange')
 plt.plot(test['Date'], test['Predictions'], label="Predictions", color='red')
-plt.title("Our Stock Predictions")
+plt.title("Actual vs Predicted Close Prices")
 plt.xlabel("Date")
 plt.ylabel("Close Price")
 plt.legend()
-plt.show()
-
 
 # Print Root Mean Squared Error (RMSE) and plot training history
-y_pred = model.predict(X_test)
-rmse = np.sqrt(np.mean((y_pred - y_test)**2))
+rmse = np.sqrt(np.mean((predictions - y_test)**2))
 print("RMSE:", rmse)
 plt.figure(figsize=(12,8))
 plt.plot(predictions, label='Predicted Prices')
@@ -134,4 +122,26 @@ plt.title('Predicted vs Actual Stock Prices')
 plt.xlabel('Time')
 plt.ylabel('Stock Price')
 plt.legend()
+
+# Print Mean Absolute Error (MAE)
+mae = np.mean(np.abs(predictions - y_test))
+print("MAE:", mae)
+plt.figure(figsize=(12,8))
+plt.plot(training.history['loss'], label='Train Loss')
+plt.title('Model Loss Over Epochs')
+plt.xlabel('Epochs')
+plt.ylabel('Loss')
+plt.legend()
 plt.show()
+
+# Compare predictions to the previous day's actual price
+previous_day_baseline = y_test[:-1]
+actual_for_comparison = y_test[1:]
+predictions_for_comparison = predictions[1:]
+
+baseline_rmse = np.sqrt(np.mean((previous_day_baseline - actual_for_comparison)**2))
+model_rmse = np.sqrt(np.mean((predictions_for_comparison - actual_for_comparison)**2))
+
+print(f"Baseline RMSE (just predicting previous day): {baseline_rmse}")
+print(f"Model RMSE: {model_rmse}")
+print(f"Improvement over baseline: {baseline_rmse - model_rmse}")
